@@ -227,13 +227,42 @@
 
     <div class="divide"></div>
 
-    <h2><span class="n">2</span> Chọn âm thanh từ máy</h2>
-    <div class="drop" id="syncAudDrop" onclick="syncAudInput.click()">
-      <div style="font-size:32px">📂</div>
-      <strong>Chọn một hoặc nhiều file âm thanh</strong>
-      <small>Chọn các đoạn đã cắt · giữ Ctrl để chọn nhiều</small>
+    <h2><span class="n">2</span> Chọn âm thanh</h2>
+    <div style="background:var(--panel-2);border:1px solid var(--line);border-radius:10px;padding:12px;margin-bottom:12px">
+      <div style="font-size:12px;color:var(--muted);margin-bottom:8px">
+        OmniHuman chỉ nhận URL công khai. Chọn cách cung cấp file:
+      </div>
+      <div class="chips" id="srcChips">
+        <div class="chip active" data-s="file" style="font-size:12px">Tải từ máy</div>
+        <div class="chip" data-s="url" style="font-size:12px">Dán URL</div>
+      </div>
     </div>
-    <input type="file" id="syncAudInput" accept="audio/*" multiple>
+
+    <div id="srcFile">
+      <div class="drop" id="syncAudDrop" onclick="syncAudInput.click()">
+        <div style="font-size:32px">📂</div>
+        <strong>Chọn một hoặc nhiều file âm thanh</strong>
+        <small>Chọn các đoạn đã cắt · giữ Ctrl để chọn nhiều</small>
+      </div>
+      <input type="file" id="syncAudInput" accept="audio/*" multiple>
+      <div style="font-size:11px;color:var(--muted);margin-top:8px">
+        Cần endpoint upload của Kie.ai. Nếu chưa có, dùng tab "Dán URL".
+      </div>
+      <input type="text" id="uploadEpIn" placeholder="Đường dẫn upload, vd: /api/v1/file/upload"
+        style="font-family:monospace;font-size:11px;margin-top:8px">
+    </div>
+
+    <div id="srcUrl" style="display:none">
+      <label style="margin-top:0">Dán link ảnh chân dung (https://...)</label>
+      <input type="text" id="imgUrlIn" placeholder="https://.../portrait.png" style="font-size:12px">
+      <label>Dán link âm thanh, mỗi dòng một link</label>
+      <textarea id="audUrlIn" placeholder="https://.../doan_01.wav&#10;https://.../doan_02.wav"
+        style="min-height:90px;font-size:12px;font-family:monospace"></textarea>
+      <button class="btn alt" onclick="loadFromUrls()" style="margin-top:10px">Nạp danh sách từ URL</button>
+      <div style="font-size:11px;color:var(--muted);margin-top:8px">
+        Có thể tải file lên GitHub repo của bạn rồi lấy link raw.
+      </div>
+    </div>
   </div>
 
   <div class="card">
@@ -255,7 +284,7 @@
   </div>
 </div>
 
-<script src="https://cdn.jsdelivr.net/gh/gzuidhof/coi-serviceworker@latest/coi-serviceworker.min.js"></script>
+<script src="coi-serviceworker.min.js"></script>
 <script>
 /* ===================== ĐĂNG NHẬP ===================== */
 const APP_PASS = "minhtriet1973";
@@ -268,7 +297,8 @@ const pwErr=document.getElementById('pwErr');
 function unlock(){
   gate.classList.add('hide');
   document.body.style.overflow='';
-  loadCredit();                     // chỉ gọi API sau khi đã vào
+  // hoãn 1 tick: chờ toàn bộ script khai báo xong rồi mới gọi API
+  setTimeout(()=>{ try{ loadCredit(); }catch(e){ console.warn('loadCredit:',e); } },0);
 }
 function doLogin(){
   if(pw.value===APP_PASS){
@@ -448,6 +478,39 @@ async function downloadAllSegments(){
 }
 
 /* ========== TAB 2: chọn file âm thanh từ máy ========== */
+/* ---------- Chọn nguồn: file máy hay URL ---------- */
+let srcMode='file';
+document.getElementById('srcChips').addEventListener('click',e=>{
+  const t=e.target.closest('.chip'); if(!t)return;
+  [...t.parentNode.children].forEach(c=>c.classList.remove('active'));
+  t.classList.add('active'); srcMode=t.dataset.s;
+  document.getElementById('srcFile').style.display = srcMode==='file'?'':'none';
+  document.getElementById('srcUrl').style.display  = srcMode==='url' ?'':'none';
+});
+
+// endpoint upload tuỳ chỉnh
+const uploadEpIn=document.getElementById('uploadEpIn');
+uploadEpIn.value=localStorage.getItem('omni_upload_ep')||'';
+uploadEpIn.addEventListener('input',()=>{
+  const v=uploadEpIn.value.trim();
+  if(v){ UPLOAD_EP=v; localStorage.setItem('omni_upload_ep',v); }
+  else { UPLOAD_EP=null; localStorage.removeItem('omni_upload_ep'); }
+});
+
+// nạp danh sách từ URL đã dán
+function loadFromUrls(){
+  const iu=document.getElementById('imgUrlIn').value.trim();
+  if(iu) imgUrl=iu;
+  const lines=document.getElementById('audUrlIn').value
+    .split('\n').map(s=>s.trim()).filter(s=>/^https?:\/\//.test(s));
+  if(!lines.length){alert('Chưa có link âm thanh hợp lệ.');return;}
+  segments=lines.map((u,i)=>({
+    idx:i, file:null, directUrl:u, url:u,
+    name:u.split('/').pop()||`audio_${i+1}`, status:'idle', videoUrl:null
+  }));
+  renderSegments();
+}
+
 const syncAudInput=document.getElementById('syncAudInput');
 syncAudInput.onchange=e=>{
   const files=[...e.target.files];
@@ -554,20 +617,25 @@ function hideStatus(){statusEl.classList.remove('show');}
 
 /* ---------- Create one video ---------- */
 async function makeVideo(idx){
-  if(!imgFile){alert('Vui lòng tải ảnh chân dung trước.');return;}
   const seg=segments[idx];
+  if(!imgUrl && !imgFile){alert('Vui lòng chọn ảnh chân dung, hoặc dán link ảnh.');return;}
   seg.status='run'; renderSegments();
 
   // ghi số dư TRƯỚC khi tạo
   creditBefore=await getCredit();
 
   try{
-    // --- Bước 1: đưa ảnh & âm thanh lên để lấy URL công khai ---
-    setStatus(`Đoạn ${idx+1}: đang tải ảnh lên...`,5);
-    if(!imgUrl) imgUrl = await uploadFile(imgFile, 'portrait.png');
+    // --- Bước 1: có URL sẵn thì dùng luôn, không thì upload ---
+    if(!imgUrl){
+      setStatus(`Đoạn ${idx+1}: đang tải ảnh lên...`,5);
+      imgUrl = await uploadFile(imgFile, 'portrait.png');
+    }
 
-    setStatus(`Đoạn ${idx+1}: đang tải âm thanh lên...`,12);
-    const audUrl = await uploadFile(seg.file, seg.name);
+    let audUrl = seg.directUrl;
+    if(!audUrl){
+      setStatus(`Đoạn ${idx+1}: đang tải âm thanh lên...`,12);
+      audUrl = await uploadFile(seg.file, seg.name);
+    }
 
     // --- Bước 2: tạo task ---
     setStatus(`Đoạn ${idx+1}: đang gửi yêu cầu tạo video...`,18);
