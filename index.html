@@ -102,6 +102,19 @@
   .err{color:var(--danger)} .muted{color:var(--muted);font-size:12px}
   .divide{height:1px;background:var(--line);margin:18px 0}
 
+  /* ----- Tabs ----- */
+  .tabbar{display:flex;gap:8px;max-width:1300px;margin:22px auto 0;padding:0 24px}
+  .tab{flex:1;padding:14px;border:1px solid var(--line);border-radius:12px 12px 0 0;
+    background:var(--panel-2);color:var(--muted);font-size:14px;font-weight:700;
+    cursor:pointer;transition:.15s;border-bottom:none}
+  .tab:hover{color:var(--ink)}
+  .tab.active{background:linear-gradient(180deg,var(--panel),var(--panel-2));
+    color:var(--ink);border-color:var(--accent);box-shadow:0 -2px 0 var(--accent) inset}
+  .tabpane{padding-top:16px}
+  .segfile{display:flex;align-items:center;gap:10px;padding:10px;border:1px solid var(--line);
+    border-radius:10px;background:var(--panel-2);margin-top:8px;flex-wrap:wrap}
+  .segfile .nm{font-size:12.5px;font-weight:600;flex:1;min-width:120px;word-break:break-all}
+
   /* ----- Màn hình đăng nhập ----- */
   #gate{position:fixed;inset:0;z-index:100;display:grid;place-items:center;
     background:radial-gradient(900px 500px at 30% 0%,#16233f 0,transparent 60%),
@@ -154,8 +167,45 @@
   </div>
 </header>
 
-<div class="wrap">
-  <!-- LEFT -->
+<!-- ===== Tabs ===== -->
+<div class="tabbar">
+  <button class="tab active" data-tab="cut" onclick="switchTab('cut')">✂️ Cắt âm thanh</button>
+  <button class="tab" data-tab="sync" onclick="switchTab('sync')">🎬 Tạo Lip Sync</button>
+</div>
+
+<!-- ===== TAB 1: CẮT ÂM THANH ===== -->
+<div class="wrap tabpane" id="pane-cut">
+  <div class="card">
+    <h2><span class="n">1</span> Tải âm thanh gốc</h2>
+    <div class="drop" id="audDrop" onclick="audInput.click()">
+      <div style="font-size:32px">🎙️</div>
+      <strong>Tải lên âm thanh</strong>
+      <small>MP3 / WAV / M4A</small>
+    </div>
+    <input type="file" id="audInput" accept="audio/*">
+    <div id="audFull"></div>
+
+    <label>Độ dài mỗi đoạn cắt</label>
+    <div class="chips" id="cutChips">
+      <div class="chip active" data-d="15">15s</div>
+      <div class="chip" data-d="30">30s</div>
+      <div class="chip" data-d="60">60s</div>
+      <div class="chip" data-d="120">120s</div>
+    </div>
+    <button class="btn alt" id="cutBtn" onclick="cutAudio()" disabled>✂️ Cắt thành các đoạn</button>
+    <div class="hint">Cắt xong, nghe thử và tải các đoạn về máy. Sau đó sang tab "Tạo Lip Sync" để dùng.</div>
+  </div>
+
+  <div class="card">
+    <h2><span class="n">2</span> Các đoạn đã cắt</h2>
+    <div id="cutList"><div class="muted">Chưa có đoạn nào.</div></div>
+    <button class="btn ok" id="dlAllBtn" onclick="downloadAllSegments()" disabled
+      style="margin-top:14px">⬇ Tải tất cả các đoạn về máy</button>
+  </div>
+</div>
+
+<!-- ===== TAB 2: TẠO LIP SYNC ===== -->
+<div class="wrap tabpane" id="pane-sync" style="display:none">
   <div class="card">
     <h2><span class="n">1</span> Ảnh chân dung</h2>
     <div class="drop" id="imgDrop" onclick="imgInput.click()">
@@ -177,29 +227,18 @@
 
     <div class="divide"></div>
 
-    <h2><span class="n">2</span> Âm thanh & cắt đoạn</h2>
-    <div class="drop" id="audDrop" onclick="audInput.click()">
-      <div style="font-size:32px">🎙️</div>
-      <strong>Tải lên âm thanh</strong>
-      <small>MP3 / WAV / M4A</small>
+    <h2><span class="n">2</span> Chọn âm thanh từ máy</h2>
+    <div class="drop" id="syncAudDrop" onclick="syncAudInput.click()">
+      <div style="font-size:32px">📂</div>
+      <strong>Chọn một hoặc nhiều file âm thanh</strong>
+      <small>Chọn các đoạn đã cắt · giữ Ctrl để chọn nhiều</small>
     </div>
-    <input type="file" id="audInput" accept="audio/*">
-    <div id="audFull"></div>
-
-    <label>Độ dài mỗi đoạn cắt</label>
-    <div class="chips" id="cutChips">
-      <div class="chip active" data-d="15">15s</div>
-      <div class="chip" data-d="30">30s</div>
-      <div class="chip" data-d="60">60s</div>
-      <div class="chip" data-d="120">120s</div>
-    </div>
-    <button class="btn alt" id="cutBtn" onclick="cutAudio()" disabled>✂️ Cắt âm thanh thành đoạn</button>
+    <input type="file" id="syncAudInput" accept="audio/*" multiple>
   </div>
 
-  <!-- RIGHT -->
   <div class="card">
-    <h2><span class="n">3</span> Các đoạn & tạo Lip Sync</h2>
-    <div id="segList"><div class="muted">Chưa có đoạn nào. Tải âm thanh và bấm "Cắt âm thanh".</div></div>
+    <h2><span class="n">3</span> Danh sách & tạo video</h2>
+    <div id="segList"><div class="muted">Chưa chọn file âm thanh nào.</div></div>
 
     <div class="status" id="status">
       <div class="row"><div class="spin"></div><div id="statusText">Đang xử lý...</div></div>
@@ -216,6 +255,7 @@
   </div>
 </div>
 
+<script src="https://cdn.jsdelivr.net/gh/gzuidhof/coi-serviceworker@latest/coi-serviceworker.min.js"></script>
 <script>
 /* ===================== ĐĂNG NHẬP ===================== */
 const APP_PASS = "minhtriet1973";
@@ -268,6 +308,14 @@ let imgB64=null, imgFile=null, imgUrl=null, resolution="1080", cutLen=15;
 let audioBuffer=null, audioCtx=null;
 let segments=[];       // {idx, blob, url, dur, status, videoUrl}
 let creditBefore=null;
+
+/* ---------- Chuyển tab ---------- */
+function switchTab(name){
+  document.querySelectorAll('.tab').forEach(t=>
+    t.classList.toggle('active', t.dataset.tab===name));
+  document.getElementById('pane-cut').style.display  = name==='cut' ? '' : 'none';
+  document.getElementById('pane-sync').style.display = name==='sync'? '' : 'none';
+}
 
 /* ---------- Credit ---------- */
 const creditVal=document.getElementById('creditVal');
@@ -351,21 +399,73 @@ function sliceBuffer(buf,start,end){
     out.getChannelData(c).set(buf.getChannelData(c).subarray(s,e));
   return out;
 }
+/* ========== TAB 1: cắt âm thanh ========== */
+let cutSegments=[];      // {idx, blob, url, dur, name}
+
 function cutAudio(){
   if(!audioBuffer)return;
-  segments=[]; const total=audioBuffer.duration;
+  cutSegments=[]; const total=audioBuffer.duration;
   for(let start=0,i=0;start<total;start+=cutLen,i++){
     const end=Math.min(start+cutLen,total);
     const seg=sliceBuffer(audioBuffer,start,end);
     const blob=bufferToWav(seg);
-    segments.push({idx:i,blob,url:URL.createObjectURL(blob),dur:end-start,status:'idle',videoUrl:null});
+    cutSegments.push({
+      idx:i, blob, url:URL.createObjectURL(blob),
+      dur:end-start, name:`doan_${String(i+1).padStart(2,'0')}.wav`
+    });
   }
-  renderSegments();
+  renderCutList();
+  document.getElementById('dlAllBtn').disabled=!cutSegments.length;
 }
+
+function renderCutList(){
+  const el=document.getElementById('cutList');
+  if(!cutSegments.length){el.innerHTML='<div class="muted">Chưa có đoạn nào.</div>';return;}
+  el.innerHTML='';
+  cutSegments.forEach(s=>{
+    const div=document.createElement('div');
+    div.className='seg';
+    div.innerHTML=`
+      <div class="lbl">Đoạn ${s.idx+1}<br><span class="muted">${s.dur.toFixed(1)}s</span></div>
+      <audio controls src="${s.url}"></audio>
+      <button onclick="downloadSegment(${s.idx})">⬇ Tải</button>`;
+    el.appendChild(div);
+  });
+}
+
+function downloadSegment(i){
+  const s=cutSegments[i];
+  const a=document.createElement('a');
+  a.href=s.url; a.download=s.name; a.click();
+}
+
+async function downloadAllSegments(){
+  for(const s of cutSegments){
+    const a=document.createElement('a');
+    a.href=s.url; a.download=s.name; a.click();
+    await new Promise(r=>setTimeout(r,350));   // giãn cách để trình duyệt không chặn
+  }
+}
+
+/* ========== TAB 2: chọn file âm thanh từ máy ========== */
+const syncAudInput=document.getElementById('syncAudInput');
+syncAudInput.onchange=e=>{
+  const files=[...e.target.files];
+  if(!files.length)return;
+  segments=files.map((f,i)=>({
+    idx:i, file:f, url:URL.createObjectURL(f),
+    name:f.name, status:'idle', videoUrl:null
+  }));
+  const d=document.getElementById('syncAudDrop');
+  d.classList.add('has');
+  d.innerHTML=`<strong>Đã chọn ${files.length} file</strong>
+    <small>bấm để chọn lại</small>`;
+  renderSegments();
+};
 
 function renderSegments(){
   const el=document.getElementById('segList');
-  if(!segments.length){el.innerHTML='<div class="muted">Chưa có đoạn nào.</div>';return;}
+  if(!segments.length){el.innerHTML='<div class="muted">Chưa chọn file âm thanh nào.</div>';return;}
   el.innerHTML='';
   segments.forEach(s=>{
     const stCls=s.status==='done'?'done':s.status==='run'?'run':s.status==='err'?'err':'';
@@ -373,11 +473,11 @@ function renderSegments(){
     const div=document.createElement('div');
     div.className='seg';
     div.innerHTML=`
-      <div class="lbl">Đoạn ${s.idx+1}<br><span class="muted">${s.dur.toFixed(1)}s</span></div>
+      <div class="lbl">${s.idx+1}<br><span class="muted" style="font-size:10px">${s.name}</span></div>
       <audio controls src="${s.url}"></audio>
       <span class="st ${stCls}">${stTxt}</span>
       <button ${s.status==='run'?'disabled':''} onclick="makeVideo(${s.idx})">
-        ${s.status==='done'?'Tạo lại':'▶ Tạo lip sync'}
+        ${s.status==='done'?'Tạo lại':'▶ Tạo'}
       </button>`;
     el.appendChild(div);
   });
@@ -467,10 +567,7 @@ async function makeVideo(idx){
     if(!imgUrl) imgUrl = await uploadFile(imgFile, 'portrait.png');
 
     setStatus(`Đoạn ${idx+1}: đang tải âm thanh lên...`,12);
-    const audUrl = await uploadFile(
-      new File([seg.blob], `segment_${idx+1}.wav`, {type:'audio/wav'}),
-      `segment_${idx+1}.wav`
-    );
+    const audUrl = await uploadFile(seg.file, seg.name);
 
     // --- Bước 2: tạo task ---
     setStatus(`Đoạn ${idx+1}: đang gửi yêu cầu tạo video...`,18);
