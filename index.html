@@ -1,0 +1,497 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OmniHuman Lip Sync Studio · IDECO</title>
+<style>
+  :root{
+    --bg:#0b0f1a; --panel:#121a2e; --panel-2:#0e1526; --line:#20304f;
+    --ink:#eaf0ff; --muted:#8fa3c7; --accent:#4f8cff; --accent-2:#00d4b4;
+    --danger:#ff6b6b; --ok:#3ad29f; --warn:#ffcf5c;
+    --radius:14px; --shadow:0 10px 40px rgba(0,0,0,.45);
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; font-family:'Segoe UI',system-ui,-apple-system,sans-serif;
+    background:radial-gradient(1200px 600px at 10% -10%,#16233f 0,transparent 60%),
+               radial-gradient(1000px 500px at 110% 10%,#0f2b2e 0,transparent 55%),var(--bg);
+    color:var(--ink); min-height:100vh;
+  }
+  header{
+    display:flex;align-items:center;gap:14px;padding:18px 26px;
+    border-bottom:1px solid var(--line);position:sticky;top:0;
+    background:rgba(11,15,26,.88);backdrop-filter:blur(12px);z-index:30;flex-wrap:wrap;
+  }
+  .logo{width:42px;height:42px;border-radius:12px;
+    background:linear-gradient(135deg,var(--accent),var(--accent-2));
+    display:grid;place-items:center;font-weight:800;color:#00121a;font-size:20px}
+  header h1{font-size:17px;margin:0;font-weight:700;letter-spacing:.3px}
+  header .sub{font-size:12px;color:var(--muted)}
+  .credit{margin-left:auto;display:flex;align-items:center;gap:10px;font-size:13px;
+    background:var(--panel-2);border:1px solid var(--line);border-radius:10px;padding:8px 14px}
+  .credit b{color:var(--accent-2);font-size:15px}
+  .credit button{background:none;border:1px solid var(--line);color:var(--muted);
+    border-radius:8px;cursor:pointer;padding:4px 8px;font-size:12px}
+  .credit button:hover{color:var(--ink);border-color:var(--accent)}
+  .wrap{max-width:1300px;margin:0 auto;padding:24px;display:grid;
+    grid-template-columns:1fr 1fr;gap:20px}
+  @media(max-width:960px){.wrap{grid-template-columns:1fr}}
+  .card{background:linear-gradient(180deg,var(--panel),var(--panel-2));
+    border:1px solid var(--line);border-radius:var(--radius);padding:20px;box-shadow:var(--shadow)}
+  .card h2{margin:0 0 14px;font-size:15px;display:flex;align-items:center;gap:8px}
+  .card h2 .n{width:24px;height:24px;border-radius:8px;background:var(--accent);
+    color:#00121a;display:grid;place-items:center;font-size:13px;font-weight:800}
+  label{display:block;font-size:13px;color:var(--muted);margin:14px 0 6px}
+  .drop{border:2px dashed var(--line);border-radius:12px;padding:22px;text-align:center;
+    cursor:pointer;transition:.2s;background:rgba(255,255,255,.02)}
+  .drop:hover{border-color:var(--accent);background:rgba(79,140,255,.06)}
+  .drop.has{border-style:solid;border-color:var(--accent-2);padding:10px}
+  .drop small{color:var(--muted);display:block;margin-top:6px;font-size:12px}
+  .preview-img{max-width:100%;max-height:230px;border-radius:10px;display:block;margin:0 auto}
+  input[type=file]{display:none}
+  select,input[type=text]{width:100%;padding:11px 12px;background:var(--panel-2);
+    border:1px solid var(--line);color:var(--ink);border-radius:10px;font-size:14px}
+  .ratios{display:flex;gap:8px;flex-wrap:wrap}
+  .ratio{flex:1;min-width:64px;padding:9px;border:1px solid var(--line);border-radius:10px;
+    text-align:center;cursor:pointer;font-size:12px;background:var(--panel-2);transition:.15s}
+  .ratio .box{margin:0 auto 6px;background:var(--line);border-radius:3px}
+  .ratio.active{border-color:var(--accent);background:rgba(79,140,255,.12);color:#fff}
+  .ratio.active .box{background:var(--accent)}
+  .chips{display:flex;gap:8px;flex-wrap:wrap}
+  .chip{flex:1;min-width:56px;padding:11px;text-align:center;border:1px solid var(--line);
+    border-radius:10px;cursor:pointer;font-weight:700;background:var(--panel-2);transition:.15s;font-size:14px}
+  .chip.active{border-color:var(--accent-2);background:rgba(0,212,180,.12);color:#fff}
+  textarea{width:100%;padding:11px 12px;background:var(--panel-2);border:1px solid var(--line);
+    color:var(--ink);border-radius:10px;font-size:14px;resize:vertical;min-height:60px;font-family:inherit}
+  .btn{width:100%;padding:14px;border:none;border-radius:12px;font-size:15px;font-weight:800;
+    cursor:pointer;color:#00121a;background:linear-gradient(135deg,var(--accent),var(--accent-2));
+    margin-top:14px;transition:.15s;letter-spacing:.3px}
+  .btn.alt{background:linear-gradient(135deg,#7a5cff,#4f8cff)}
+  .btn.ok{background:linear-gradient(135deg,var(--ok),#2bb98a)}
+  .btn:hover{filter:brightness(1.08)}
+  .btn:disabled{opacity:.45;cursor:not-allowed;filter:grayscale(.4)}
+  .hint{font-size:11px;color:var(--muted);margin-top:6px}
+  audio{width:100%;margin-top:8px}
+  .seg{display:flex;align-items:center;gap:10px;padding:10px;border:1px solid var(--line);
+    border-radius:10px;background:var(--panel-2);margin-top:8px;flex-wrap:wrap}
+  .seg .lbl{font-weight:700;font-size:13px;min-width:64px}
+  .seg audio{flex:1;min-width:160px;margin:0;height:34px}
+  .seg .st{font-size:11px;padding:3px 8px;border-radius:6px;background:var(--line);color:var(--muted)}
+  .seg .st.done{background:rgba(58,210,159,.18);color:var(--ok)}
+  .seg .st.run{background:rgba(255,207,92,.18);color:var(--warn)}
+  .seg .st.err{background:rgba(255,107,107,.18);color:var(--danger)}
+  .seg button{padding:7px 12px;border:none;border-radius:8px;font-weight:700;font-size:12px;
+    cursor:pointer;background:var(--accent);color:#00121a}
+  .seg button:disabled{opacity:.4;cursor:not-allowed}
+  .status{margin-top:14px;padding:13px;border-radius:12px;background:var(--panel-2);
+    border:1px solid var(--line);font-size:13px;display:none}
+  .status.show{display:block}
+  .status .row{display:flex;align-items:center;gap:10px}
+  .spin{width:17px;height:17px;border:3px solid var(--line);border-top-color:var(--accent-2);
+    border-radius:50%;animation:sp 1s linear infinite;flex-shrink:0}
+  @keyframes sp{to{transform:rotate(360deg)}}
+  .bar{height:6px;background:var(--line);border-radius:99px;margin-top:9px;overflow:hidden}
+  .bar > i{display:block;height:100%;width:0;border-radius:99px;
+    background:linear-gradient(90deg,var(--accent),var(--accent-2));transition:width .4s}
+  video{width:100%;border-radius:12px;background:#000;margin-top:6px}
+  .vitem{margin-top:12px;padding:10px;border:1px solid var(--line);border-radius:10px;background:var(--panel-2)}
+  .vitem .top{display:flex;justify-content:space-between;align-items:center;font-size:12px;color:var(--muted);margin-bottom:6px}
+  .dl{display:inline-block;padding:8px 16px;border-radius:9px;background:var(--ok);
+    color:#00160f;font-weight:800;text-decoration:none;font-size:12px;cursor:pointer}
+  .err{color:var(--danger)} .muted{color:var(--muted);font-size:12px}
+  .divide{height:1px;background:var(--line);margin:18px 0}
+</style>
+</head>
+<body>
+<header>
+  <div class="logo">Ω</div>
+  <div>
+    <h1>OmniHuman Lip Sync Studio</h1>
+    <div class="sub">Cắt âm thanh · Tạo video nói theo đoạn · Nối MP4 · IDECO</div>
+  </div>
+  <div class="credit">
+    <span>Số dư:</span><b id="creditVal">—</b>
+    <button onclick="loadCredit()">↻</button>
+  </div>
+</header>
+
+<div class="wrap">
+  <!-- LEFT -->
+  <div class="card">
+    <div style="background:var(--panel-2);border:1px solid var(--line);border-radius:10px;padding:12px;margin-bottom:16px">
+      <div style="font-size:12px;color:var(--muted);margin-bottom:6px">Tên model (lấy từ docs Kie.ai)</div>
+      <input type="text" id="modelIn" placeholder="vd: bytedance/omnihuman-1-5" style="font-family:monospace;font-size:12px">
+      <div style="display:flex;gap:8px;margin-top:8px">
+        <button onclick="testModel()" style="flex:1;padding:9px;border:none;border-radius:8px;background:var(--accent);color:#00121a;font-weight:700;font-size:12px;cursor:pointer">Thử nhanh tên model</button>
+        <button onclick="resetModel()" style="padding:9px 12px;border:1px solid var(--line);border-radius:8px;background:var(--panel-2);color:var(--muted);font-size:12px;cursor:pointer">Mặc định</button>
+      </div>
+      <div id="modelMsg" style="font-size:12px;margin-top:8px"></div>
+      <div style="font-size:11px;color:var(--muted);margin-top:6px">Gõ vài biến thể để tìm tên đúng. Tên hợp lệ sẽ được lưu tự động.</div>
+    </div>
+
+    <h2><span class="n">1</span> Ảnh chân dung</h2>
+    <div class="drop" id="imgDrop" onclick="imgInput.click()">
+      <div style="font-size:32px">🖼️</div>
+      <strong>Tải lên hình ảnh</strong>
+      <small>JPG / PNG · khuôn mặt rõ, chính diện</small>
+    </div>
+    <input type="file" id="imgInput" accept="image/*">
+
+    <label>Khung hình</label>
+    <div class="ratios" id="ratios"></div>
+
+    <label>Mô tả biểu cảm (tuỳ chọn)</label>
+    <textarea id="prompt" placeholder="VD: mỉm cười tự tin, cử chỉ tay tự nhiên khi nói..."></textarea>
+
+    <div class="divide"></div>
+
+    <h2><span class="n">2</span> Âm thanh & cắt đoạn</h2>
+    <div class="drop" id="audDrop" onclick="audInput.click()">
+      <div style="font-size:32px">🎙️</div>
+      <strong>Tải lên âm thanh</strong>
+      <small>MP3 / WAV / M4A</small>
+    </div>
+    <input type="file" id="audInput" accept="audio/*">
+    <div id="audFull"></div>
+
+    <label>Độ dài mỗi đoạn cắt</label>
+    <div class="chips" id="cutChips">
+      <div class="chip active" data-d="15">15s</div>
+      <div class="chip" data-d="30">30s</div>
+      <div class="chip" data-d="60">60s</div>
+      <div class="chip" data-d="120">120s</div>
+    </div>
+    <button class="btn alt" id="cutBtn" onclick="cutAudio()" disabled>✂️ Cắt âm thanh thành đoạn</button>
+  </div>
+
+  <!-- RIGHT -->
+  <div class="card">
+    <h2><span class="n">3</span> Các đoạn & tạo Lip Sync</h2>
+    <div id="segList"><div class="muted">Chưa có đoạn nào. Tải âm thanh và bấm "Cắt âm thanh".</div></div>
+
+    <div class="status" id="status">
+      <div class="row"><div class="spin"></div><div id="statusText">Đang xử lý...</div></div>
+      <div class="bar"><i id="progBar"></i></div>
+    </div>
+
+    <div class="divide"></div>
+
+    <h2><span class="n">4</span> Video đã tạo</h2>
+    <div id="videoList"><div class="muted">Video tạo ra sẽ xuất hiện ở đây.</div></div>
+
+    <button class="btn ok" id="mergeBtn" onclick="mergeVideos()" disabled>🎬 Nối tất cả video thành 1 MP4</button>
+    <div id="mergeOut"></div>
+  </div>
+</div>
+
+<script>
+/* ===================== CONFIG (API trong code, không hiện giao diện) ===================== */
+const API_KEY  = "3fb45067e29a8aabb5e6f182b9d7b8e4";
+const API_BASE = "https://api.kie.ai";
+let   MODEL    = localStorage.getItem('omni_model') || "omnihuman-1-5";
+const FFMPEG_CORE = "https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd/ffmpeg-core.js";
+const FFMPEG_UMD  = "https://unpkg.com/@ffmpeg/ffmpeg@0.12.10/dist/umd/ffmpeg.js";
+const FFMPEG_UTIL = "https://unpkg.com/@ffmpeg/util@0.12.1/dist/umd/index.js";
+/* ======================================================================================== */
+
+let imgB64=null, ratio="9:16", cutLen=15;
+let audioBuffer=null, audioCtx=null;
+let segments=[];       // {idx, blob, url, dur, status, videoUrl}
+let creditBefore=null;
+
+/* ---------- Credit ---------- */
+const creditVal=document.getElementById('creditVal');
+async function getCredit(){
+  try{
+    const r=await fetch(`${API_BASE}/api/v1/chat/credit`,{headers:{'Authorization':`Bearer ${API_KEY}`}});
+    const j=await r.json();
+    const c=j.data?.credit ?? j.data?.credits ?? j.data ?? j.credit;
+    return (typeof c==='number')?c:(typeof c==='object'?null:Number(c));
+  }catch(e){ return null; }
+}
+async function loadCredit(){
+  creditVal.textContent='...';
+  const c=await getCredit();
+  creditVal.textContent=(c==null||isNaN(c))?'N/A':c;
+}
+loadCredit();
+
+/* ---------- Model name: nhập & thử nhanh ---------- */
+const modelIn=document.getElementById('modelIn');
+const modelMsg=document.getElementById('modelMsg');
+modelIn.value=MODEL;
+modelIn.addEventListener('input',()=>{
+  MODEL=modelIn.value.trim();
+  localStorage.setItem('omni_model',MODEL);
+});
+function resetModel(){
+  MODEL="omnihuman-1-5";
+  modelIn.value=MODEL;
+  localStorage.setItem('omni_model',MODEL);
+  modelMsg.innerHTML='<span class="muted">Đã đặt lại: omnihuman-1-5</span>';
+}
+async function testModel(){
+  const m=modelIn.value.trim();
+  if(!m){modelMsg.innerHTML='<span class="err">Chưa nhập tên model.</span>';return;}
+  modelMsg.innerHTML='<span class="muted">Đang thử...</span>';
+  // gửi 1 request tối thiểu chỉ để xem máy chủ có nhận tên model không
+  try{
+    const r=await fetch(`${API_BASE}/api/v1/jobs/createTask`,{
+      method:'POST',
+      headers:{'Content-Type':'application/json','Authorization':`Bearer ${API_KEY}`},
+      body:JSON.stringify({model:m,input:{}})
+    });
+    const j=await r.json();
+    const msg=(j.msg||j.message||'').toString();
+    if(/model name.*not supported|not supported.*model/i.test(msg)){
+      modelMsg.innerHTML=`<span class="err">✕ Không hợp lệ: ${msg}</span>`;
+    }else{
+      // máy chủ than phiền về input/tham số ⇒ tên model đã được chấp nhận
+      MODEL=m; localStorage.setItem('omni_model',m);
+      modelMsg.innerHTML=`<span style="color:var(--ok)">✓ Tên model được chấp nhận. Máy chủ trả về: ${msg||'(tạo task thành công)'}</span>`;
+    }
+  }catch(e){
+    modelMsg.innerHTML=`<span class="err">Lỗi kết nối: ${e.message}</span>`;
+  }
+}
+
+/* ---------- Ratios ---------- */
+const RATIOS=[{r:"9:16",w:15,h:26},{r:"3:4",w:20,h:26},{r:"1:1",w:23,h:23},{r:"4:3",w:26,h:20},{r:"16:9",w:28,h:16}];
+const ratiosEl=document.getElementById('ratios');
+RATIOS.forEach(o=>{
+  const d=document.createElement('div');
+  d.className='ratio'+(o.r===ratio?' active':'');
+  d.innerHTML=`<div class="box" style="width:${o.w}px;height:${o.h}px"></div>${o.r}`;
+  d.onclick=()=>{ratio=o.r;[...ratiosEl.children].forEach(c=>c.classList.remove('active'));d.classList.add('active')};
+  ratiosEl.appendChild(d);
+});
+
+/* ---------- Cut length chips ---------- */
+document.getElementById('cutChips').addEventListener('click',e=>{
+  const t=e.target.closest('.chip'); if(!t)return;
+  [...t.parentNode.children].forEach(c=>c.classList.remove('active'));
+  t.classList.add('active'); cutLen=+t.dataset.d;
+});
+
+/* ---------- Image ---------- */
+const toB64=f=>new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(r.result);r.onerror=rej;r.readAsDataURL(f)});
+const imgInput=document.getElementById('imgInput');
+imgInput.onchange=async e=>{
+  const f=e.target.files[0]; if(!f)return;
+  imgB64=await toB64(f);
+  const d=document.getElementById('imgDrop'); d.classList.add('has');
+  d.innerHTML=`<img class="preview-img" src="${imgB64}"><small>${f.name} — bấm để đổi</small>`;
+};
+
+/* ---------- Audio load ---------- */
+const audInput=document.getElementById('audInput');
+audInput.onchange=async e=>{
+  const f=e.target.files[0]; if(!f)return;
+  const d=document.getElementById('audDrop'); d.classList.add('has');
+  d.innerHTML=`<audio controls src="${URL.createObjectURL(f)}" style="width:100%"></audio><small>${f.name} — bấm ngoài để đổi</small>`;
+  d.onclick=ev=>{ if(ev.target.tagName!=='AUDIO') audInput.click(); };
+  audioCtx = audioCtx || new (window.AudioContext||window.webkitAudioContext)();
+  const arr=await f.arrayBuffer();
+  audioBuffer=await audioCtx.decodeAudioData(arr);
+  document.getElementById('audFull').innerHTML=
+    `<div class="muted" style="margin-top:8px">Tổng thời lượng: ${audioBuffer.duration.toFixed(1)}s</div>`;
+  document.getElementById('cutBtn').disabled=false;
+};
+
+/* ---------- Cut audio into WAV segments ---------- */
+function bufferToWav(buf){
+  const numCh=buf.numberOfChannels, len=buf.length*numCh*2+44;
+  const ab=new ArrayBuffer(len), view=new DataView(ab);
+  const w=(o,s)=>{for(let i=0;i<s.length;i++)view.setUint8(o+i,s.charCodeAt(i))};
+  let o=0;
+  w(0,'RIFF');view.setUint32(4,len-8,true);w(8,'WAVE');w(12,'fmt ');
+  view.setUint32(16,16,true);view.setUint16(20,1,true);view.setUint16(22,numCh,true);
+  view.setUint32(24,buf.sampleRate,true);view.setUint32(28,buf.sampleRate*numCh*2,true);
+  view.setUint16(32,numCh*2,true);view.setUint16(34,16,true);w(36,'data');
+  view.setUint32(40,buf.length*numCh*2,true);o=44;
+  const chans=[];for(let c=0;c<numCh;c++)chans.push(buf.getChannelData(c));
+  for(let i=0;i<buf.length;i++)for(let c=0;c<numCh;c++){
+    let s=Math.max(-1,Math.min(1,chans[c][i]));
+    view.setInt16(o,s<0?s*0x8000:s*0x7FFF,true);o+=2;
+  }
+  return new Blob([ab],{type:'audio/wav'});
+}
+function sliceBuffer(buf,start,end){
+  const sr=buf.sampleRate, s=Math.floor(start*sr), e=Math.min(Math.floor(end*sr),buf.length);
+  const out=audioCtx.createBuffer(buf.numberOfChannels,e-s,sr);
+  for(let c=0;c<buf.numberOfChannels;c++)
+    out.getChannelData(c).set(buf.getChannelData(c).subarray(s,e));
+  return out;
+}
+function cutAudio(){
+  if(!audioBuffer)return;
+  segments=[]; const total=audioBuffer.duration;
+  for(let start=0,i=0;start<total;start+=cutLen,i++){
+    const end=Math.min(start+cutLen,total);
+    const seg=sliceBuffer(audioBuffer,start,end);
+    const blob=bufferToWav(seg);
+    segments.push({idx:i,blob,url:URL.createObjectURL(blob),dur:end-start,status:'idle',videoUrl:null});
+  }
+  renderSegments();
+}
+
+function renderSegments(){
+  const el=document.getElementById('segList');
+  if(!segments.length){el.innerHTML='<div class="muted">Chưa có đoạn nào.</div>';return;}
+  el.innerHTML='';
+  segments.forEach(s=>{
+    const stCls=s.status==='done'?'done':s.status==='run'?'run':s.status==='err'?'err':'';
+    const stTxt=s.status==='done'?'✓ Đã tạo':s.status==='run'?'⏳ Đang tạo':s.status==='err'?'✕ Lỗi':'Chưa tạo';
+    const div=document.createElement('div');
+    div.className='seg';
+    div.innerHTML=`
+      <div class="lbl">Đoạn ${s.idx+1}<br><span class="muted">${s.dur.toFixed(1)}s</span></div>
+      <audio controls src="${s.url}"></audio>
+      <span class="st ${stCls}">${stTxt}</span>
+      <button ${s.status==='run'?'disabled':''} onclick="makeVideo(${s.idx})">
+        ${s.status==='done'?'Tạo lại':'▶ Tạo lip sync'}
+      </button>`;
+    el.appendChild(div);
+  });
+}
+
+/* ---------- Status ---------- */
+const statusEl=document.getElementById('status'),statusText=document.getElementById('statusText'),progBar=document.getElementById('progBar');
+function setStatus(t,p){statusEl.classList.add('show');statusText.innerHTML=t;if(p!=null)progBar.style.width=p+'%';}
+function hideStatus(){statusEl.classList.remove('show');}
+
+/* ---------- Create one video ---------- */
+async function makeVideo(idx){
+  if(!imgB64){alert('Vui lòng tải ảnh chân dung trước.');return;}
+  const seg=segments[idx];
+  seg.status='run'; renderSegments();
+
+  // ghi số dư TRƯỚC khi tạo
+  creditBefore=await getCredit();
+  setStatus(`Đoạn ${idx+1}: đang gửi yêu cầu...`,8);
+
+  try{
+    const audB64=await toB64(seg.blob);
+    const cr=await fetch(`${API_BASE}/api/v1/jobs/createTask`,{
+      method:'POST',
+      headers:{'Content-Type':'application/json','Authorization':`Bearer ${API_KEY}`},
+      body:JSON.stringify({model:MODEL,input:{
+        image_url:imgB64, audio_url:audB64, aspect_ratio:ratio,
+        prompt:document.getElementById('prompt').value.trim()||undefined
+      }})
+    });
+    const cj=await cr.json();
+    const taskId=cj.data?.taskId||cj.data?.task_id||cj.taskId;
+    if(!taskId){
+      console.log('Phản hồi máy chủ:',cj);
+      throw new Error((cj.msg||cj.message||'Không nhận được Task ID')+' — xem Console (F12) để biết chi tiết');
+    }
+
+    setStatus(`Đoạn ${idx+1}: đang dựng video...`,25);
+    const t0=Date.now(); let pct=25;
+    while(true){
+      await new Promise(r=>setTimeout(r,5000));
+      const ir=await fetch(`${API_BASE}/api/v1/jobs/recordInfo?taskId=${encodeURIComponent(taskId)}`,
+        {headers:{'Authorization':`Bearer ${API_KEY}`}});
+      const ij=await ir.json(); const d=ij.data||{};
+      const st=(d.state||d.status||'').toString().toLowerCase();
+      if(['success','succeeded','completed'].includes(st)){
+        let url=d.resultUrls?.[0]||d.resultUrl||d.videoUrl;
+        if(!url&&d.resultJson){try{url=JSON.parse(d.resultJson).resultUrls?.[0]}catch(e){}}
+        if(!url)throw new Error('Không tìm thấy link video');
+        seg.status='done'; seg.videoUrl=url; renderSegments();
+        // tính credit ĐÃ DÙNG
+        const after=await getCredit();
+        creditVal.textContent=(after==null?'N/A':after);
+        let costMsg='';
+        if(creditBefore!=null&&after!=null&&!isNaN(creditBefore)&&!isNaN(after))
+          costMsg=` · Lần này tốn <b style="color:var(--warn)">${(creditBefore-after)}</b> credit`;
+        setStatus(`✓ Đoạn ${idx+1} hoàn tất${costMsg}`,100);
+        addVideo(seg); updateMergeBtn();
+        setTimeout(hideStatus,5000); return;
+      }
+      if(['fail','failed','error'].includes(st))
+        throw new Error(d.failMsg||d.failReason||'Máy chủ báo lỗi dựng video');
+      pct=Math.min(92,pct+4);
+      setStatus(`Đoạn ${idx+1}: đang dựng... (${Math.round((Date.now()-t0)/1000)}s)`,pct);
+    }
+  }catch(err){
+    seg.status='err'; renderSegments();
+    setStatus(`<span class="err">✕ Đoạn ${idx+1}: ${err.message}</span>`,100);
+  }
+}
+
+/* ---------- Video list ---------- */
+function addVideo(seg){
+  const list=document.getElementById('videoList');
+  if(list.querySelector('.muted'))list.innerHTML='';
+  let item=document.getElementById('vid-'+seg.idx);
+  if(!item){item=document.createElement('div');item.className='vitem';item.id='vid-'+seg.idx;list.appendChild(item);}
+  item.innerHTML=`
+    <div class="top"><span>🎥 Video đoạn ${seg.idx+1}</span>
+      <span class="dl" onclick="dl('${seg.videoUrl}',${seg.idx})">⬇ Tải</span></div>
+    <video controls src="${seg.videoUrl}"></video>`;
+}
+async function dl(url,idx){
+  try{const b=await(await fetch(url)).blob();const a=document.createElement('a');
+    a.href=URL.createObjectURL(b);a.download=`lipsync_doan_${idx+1}.mp4`;a.click();}
+  catch(e){window.open(url,'_blank');}
+}
+function updateMergeBtn(){
+  const done=segments.filter(s=>s.status==='done'&&s.videoUrl);
+  document.getElementById('mergeBtn').disabled=done.length<2;
+}
+
+/* ---------- Merge with ffmpeg.wasm ---------- */
+let ffmpeg=null;
+function loadScript(src){return new Promise((res,rej)=>{const s=document.createElement('script');s.src=src;s.onload=res;s.onerror=()=>rej(new Error('Không tải được '+src));document.head.appendChild(s);});}
+async function ensureFFmpeg(){
+  if(ffmpeg)return ffmpeg;
+  setStatus('Đang tải bộ nối video (ffmpeg)...',5);
+  await loadScript(FFMPEG_UMD);
+  await loadScript(FFMPEG_UTIL);
+  const {FFmpeg}=window.FFmpegWASM||window;
+  ffmpeg=new FFmpeg();
+  await ffmpeg.load({coreURL:FFMPEG_CORE});
+  return ffmpeg;
+}
+async function mergeVideos(){
+  const done=segments.filter(s=>s.status==='done'&&s.videoUrl);
+  if(done.length<2){alert('Cần ít nhất 2 video để nối.');return;}
+  const out=document.getElementById('mergeOut'); out.innerHTML='';
+  try{
+    const ff=await ensureFFmpeg();
+    const {fetchFile}=window.FFmpegUtil||window;
+    let listTxt='';
+    for(let i=0;i<done.length;i++){
+      setStatus(`Đang nạp video ${i+1}/${done.length}...`,10+i*50/done.length);
+      const name=`v${i}.mp4`;
+      await ff.writeFile(name, await fetchFile(done[i].videoUrl));
+      listTxt+=`file ${name}\n`;
+    }
+    await ff.writeFile('list.txt', new TextEncoder().encode(listTxt));
+    setStatus('Đang nối video...',70);
+    // thử copy stream (nhanh); nếu lỗi codec sẽ encode lại
+    try{
+      await ff.exec(['-f','concat','-safe','0','-i','list.txt','-c','copy','out.mp4']);
+    }catch(e){
+      setStatus('Nối lại (encode) để đồng bộ codec...',80);
+      await ff.exec(['-f','concat','-safe','0','-i','list.txt','-c:v','libx264','-c:a','aac','out.mp4']);
+    }
+    setStatus('Xuất file...',95);
+    const data=await ff.readFile('out.mp4');
+    const blob=new Blob([data.buffer],{type:'video/mp4'});
+    const url=URL.createObjectURL(blob);
+    out.innerHTML=`
+      <div class="vitem"><div class="top"><span>🎬 Video hoàn chỉnh (${done.length} đoạn)</span>
+        <a class="dl" href="${url}" download="lipsync_hoanchinh.mp4">⬇ Tải MP4</a></div>
+        <video controls src="${url}"></video></div>`;
+    setStatus('✓ Đã nối xong!',100); setTimeout(hideStatus,3000);
+  }catch(err){
+    setStatus(`<span class="err">✕ Lỗi nối video: ${err.message}. Nếu bị chặn CDN, hãy mở file HTML trực tiếp trên máy.</span>`,100);
+  }
+}
+</script>
+</body>
+</html>
