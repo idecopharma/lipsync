@@ -101,9 +101,46 @@
     color:#00160f;font-weight:800;text-decoration:none;font-size:12px;cursor:pointer}
   .err{color:var(--danger)} .muted{color:var(--muted);font-size:12px}
   .divide{height:1px;background:var(--line);margin:18px 0}
+
+  /* ----- Màn hình đăng nhập ----- */
+  #gate{position:fixed;inset:0;z-index:100;display:grid;place-items:center;
+    background:radial-gradient(900px 500px at 30% 0%,#16233f 0,transparent 60%),
+               radial-gradient(800px 400px at 100% 100%,#0f2b2e 0,transparent 55%),var(--bg)}
+  #gate.hide{display:none}
+  .gate-box{width:min(380px,90vw);background:linear-gradient(180deg,var(--panel),var(--panel-2));
+    border:1px solid var(--line);border-radius:18px;padding:32px 28px;box-shadow:var(--shadow);text-align:center}
+  .gate-box .logo{width:54px;height:54px;font-size:26px;margin:0 auto 16px}
+  .gate-box h3{margin:0 0 4px;font-size:18px}
+  .gate-box p{margin:0 0 22px;font-size:12.5px;color:var(--muted)}
+  .gate-box input{width:100%;padding:13px 14px;background:var(--panel-2);border:1px solid var(--line);
+    color:var(--ink);border-radius:11px;font-size:15px;text-align:center;letter-spacing:2px}
+  .gate-box input:focus{outline:none;border-color:var(--accent)}
+  .gate-box .btn{margin-top:14px}
+  .gate-box .remember{display:flex;align-items:center;justify-content:center;gap:8px;
+    margin-top:14px;font-size:12.5px;color:var(--muted);cursor:pointer;user-select:none}
+  .gate-box .remember input{width:auto;margin:0;accent-color:var(--accent-2)}
+  .gate-err{color:var(--danger);font-size:12.5px;margin-top:12px;min-height:16px}
+  .logout{background:none;border:1px solid var(--line);color:var(--muted);border-radius:8px;
+    cursor:pointer;padding:5px 10px;font-size:12px;margin-left:8px}
+  .logout:hover{color:var(--danger);border-color:var(--danger)}
 </style>
 </head>
 <body>
+<!-- ===== Màn hình đăng nhập ===== -->
+<div id="gate">
+  <div class="gate-box">
+    <div class="logo">Ω</div>
+    <h3>OmniHuman Lip Sync Studio</h3>
+    <p>Nhập mật khẩu để vào ứng dụng</p>
+    <input type="password" id="pw" placeholder="••••••••" autocomplete="current-password">
+    <label class="remember">
+      <input type="checkbox" id="remember" checked>
+      Ghi nhớ trên máy này
+    </label>
+    <button class="btn" onclick="doLogin()">Vào ứng dụng</button>
+    <div class="gate-err" id="pwErr"></div>
+  </div>
+</div>
 <header>
   <div class="logo">Ω</div>
   <div>
@@ -113,23 +150,13 @@
   <div class="credit">
     <span>Số dư:</span><b id="creditVal">—</b>
     <button onclick="loadCredit()">↻</button>
+    <button class="logout" onclick="doLogout()">Thoát</button>
   </div>
 </header>
 
 <div class="wrap">
   <!-- LEFT -->
   <div class="card">
-    <div style="background:var(--panel-2);border:1px solid var(--line);border-radius:10px;padding:12px;margin-bottom:16px">
-      <div style="font-size:12px;color:var(--muted);margin-bottom:6px">Tên model (lấy từ docs Kie.ai)</div>
-      <input type="text" id="modelIn" placeholder="vd: bytedance/omnihuman-1-5" style="font-family:monospace;font-size:12px">
-      <div style="display:flex;gap:8px;margin-top:8px">
-        <button onclick="testModel()" style="flex:1;padding:9px;border:none;border-radius:8px;background:var(--accent);color:#00121a;font-weight:700;font-size:12px;cursor:pointer">Thử nhanh tên model</button>
-        <button onclick="resetModel()" style="padding:9px 12px;border:1px solid var(--line);border-radius:8px;background:var(--panel-2);color:var(--muted);font-size:12px;cursor:pointer">Mặc định</button>
-      </div>
-      <div id="modelMsg" style="font-size:12px;margin-top:8px"></div>
-      <div style="font-size:11px;color:var(--muted);margin-top:6px">Gõ vài biến thể để tìm tên đúng. Tên hợp lệ sẽ được lưu tự động.</div>
-    </div>
-
     <h2><span class="n">1</span> Ảnh chân dung</h2>
     <div class="drop" id="imgDrop" onclick="imgInput.click()">
       <div style="font-size:32px">🖼️</div>
@@ -138,8 +165,12 @@
     </div>
     <input type="file" id="imgInput" accept="image/*">
 
-    <label>Khung hình</label>
-    <div class="ratios" id="ratios"></div>
+    <label>Độ phân giải video</label>
+    <div class="chips" id="resChips">
+      <div class="chip" data-r="480">480p</div>
+      <div class="chip" data-r="720">720p</div>
+      <div class="chip active" data-r="1080">1080p</div>
+    </div>
 
     <label>Mô tả biểu cảm (tuỳ chọn)</label>
     <textarea id="prompt" placeholder="VD: mỉm cười tự tin, cử chỉ tay tự nhiên khi nói..."></textarea>
@@ -186,6 +217,44 @@
 </div>
 
 <script>
+/* ===================== ĐĂNG NHẬP ===================== */
+const APP_PASS = "minhtriet1973";
+const GATE_KEY = "omni_auth";
+
+const gate=document.getElementById('gate');
+const pw=document.getElementById('pw');
+const pwErr=document.getElementById('pwErr');
+
+function unlock(){
+  gate.classList.add('hide');
+  document.body.style.overflow='';
+  loadCredit();                     // chỉ gọi API sau khi đã vào
+}
+function doLogin(){
+  if(pw.value===APP_PASS){
+    if(document.getElementById('remember').checked)
+      localStorage.setItem(GATE_KEY,'1');
+    pwErr.textContent=''; pw.value='';
+    unlock();
+  }else{
+    pwErr.textContent='Mật khẩu không đúng.';
+    pw.value=''; pw.focus();
+  }
+}
+function doLogout(){
+  localStorage.removeItem(GATE_KEY);
+  location.reload();
+}
+pw.addEventListener('keydown',e=>{ if(e.key==='Enter') doLogin(); });
+
+// Đã ghi nhớ trước đó thì vào thẳng
+if(localStorage.getItem(GATE_KEY)==='1'){
+  unlock();
+}else{
+  document.body.style.overflow='hidden';
+  setTimeout(()=>pw.focus(),100);
+}
+/* ==================================================== */
 /* ===================== CONFIG (API trong code, không hiện giao diện) ===================== */
 const API_KEY  = "3fb45067e29a8aabb5e6f182b9d7b8e4";
 const API_BASE = "https://api.kie.ai";
@@ -195,7 +264,7 @@ const FFMPEG_UMD  = "https://unpkg.com/@ffmpeg/ffmpeg@0.12.10/dist/umd/ffmpeg.js
 const FFMPEG_UTIL = "https://unpkg.com/@ffmpeg/util@0.12.1/dist/umd/index.js";
 /* ======================================================================================== */
 
-let imgB64=null, ratio="9:16", cutLen=15;
+let imgB64=null, imgFile=null, imgUrl=null, resolution="1080", cutLen=15;
 let audioBuffer=null, audioCtx=null;
 let segments=[];       // {idx, blob, url, dur, status, videoUrl}
 let creditBefore=null;
@@ -215,56 +284,13 @@ async function loadCredit(){
   const c=await getCredit();
   creditVal.textContent=(c==null||isNaN(c))?'N/A':c;
 }
-loadCredit();
+// loadCredit() được gọi trong unlock(), sau khi đăng nhập thành công
 
-/* ---------- Model name: nhập & thử nhanh ---------- */
-const modelIn=document.getElementById('modelIn');
-const modelMsg=document.getElementById('modelMsg');
-modelIn.value=MODEL;
-modelIn.addEventListener('input',()=>{
-  MODEL=modelIn.value.trim();
-  localStorage.setItem('omni_model',MODEL);
-});
-function resetModel(){
-  MODEL="omnihuman-1-5";
-  modelIn.value=MODEL;
-  localStorage.setItem('omni_model',MODEL);
-  modelMsg.innerHTML='<span class="muted">Đã đặt lại: omnihuman-1-5</span>';
-}
-async function testModel(){
-  const m=modelIn.value.trim();
-  if(!m){modelMsg.innerHTML='<span class="err">Chưa nhập tên model.</span>';return;}
-  modelMsg.innerHTML='<span class="muted">Đang thử...</span>';
-  // gửi 1 request tối thiểu chỉ để xem máy chủ có nhận tên model không
-  try{
-    const r=await fetch(`${API_BASE}/api/v1/jobs/createTask`,{
-      method:'POST',
-      headers:{'Content-Type':'application/json','Authorization':`Bearer ${API_KEY}`},
-      body:JSON.stringify({model:m,input:{}})
-    });
-    const j=await r.json();
-    const msg=(j.msg||j.message||'').toString();
-    if(/model name.*not supported|not supported.*model/i.test(msg)){
-      modelMsg.innerHTML=`<span class="err">✕ Không hợp lệ: ${msg}</span>`;
-    }else{
-      // máy chủ than phiền về input/tham số ⇒ tên model đã được chấp nhận
-      MODEL=m; localStorage.setItem('omni_model',m);
-      modelMsg.innerHTML=`<span style="color:var(--ok)">✓ Tên model được chấp nhận. Máy chủ trả về: ${msg||'(tạo task thành công)'}</span>`;
-    }
-  }catch(e){
-    modelMsg.innerHTML=`<span class="err">Lỗi kết nối: ${e.message}</span>`;
-  }
-}
-
-/* ---------- Ratios ---------- */
-const RATIOS=[{r:"9:16",w:15,h:26},{r:"3:4",w:20,h:26},{r:"1:1",w:23,h:23},{r:"4:3",w:26,h:20},{r:"16:9",w:28,h:16}];
-const ratiosEl=document.getElementById('ratios');
-RATIOS.forEach(o=>{
-  const d=document.createElement('div');
-  d.className='ratio'+(o.r===ratio?' active':'');
-  d.innerHTML=`<div class="box" style="width:${o.w}px;height:${o.h}px"></div>${o.r}`;
-  d.onclick=()=>{ratio=o.r;[...ratiosEl.children].forEach(c=>c.classList.remove('active'));d.classList.add('active')};
-  ratiosEl.appendChild(d);
+/* ---------- Độ phân giải ---------- */
+document.getElementById('resChips').addEventListener('click',e=>{
+  const t=e.target.closest('.chip'); if(!t)return;
+  [...t.parentNode.children].forEach(c=>c.classList.remove('active'));
+  t.classList.add('active'); resolution=t.dataset.r;
 });
 
 /* ---------- Cut length chips ---------- */
@@ -279,6 +305,7 @@ const toB64=f=>new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res
 const imgInput=document.getElementById('imgInput');
 imgInput.onchange=async e=>{
   const f=e.target.files[0]; if(!f)return;
+  imgFile=f; imgUrl=null;          // đổi ảnh thì phải upload lại
   imgB64=await toB64(f);
   const d=document.getElementById('imgDrop'); d.classList.add('has');
   d.innerHTML=`<img class="preview-img" src="${imgB64}"><small>${f.name} — bấm để đổi</small>`;
@@ -356,6 +383,70 @@ function renderSegments(){
   });
 }
 
+/* ---------- Upload file để lấy URL công khai ----------
+   OmniHuman yêu cầu image_url / audio_url là URL https công khai,
+   không nhận base64. Hàm này thử lần lượt các endpoint upload
+   thường gặp của Kie.ai; endpoint nào chạy sẽ được ghi nhớ.        */
+let UPLOAD_EP = localStorage.getItem('omni_upload_ep') || null;
+const UPLOAD_CANDIDATES = [
+  '/api/v1/file/upload',
+  '/api/v1/files/upload',
+  '/api/v1/upload',
+  '/api/file/upload'
+];
+
+function pickUrl(o){
+  if(!o) return null;
+  if(typeof o==='string' && /^https?:\/\//.test(o)) return o;
+  if(typeof o!=='object') return null;
+  for(const k of ['url','fileUrl','downloadUrl','file_url','publicUrl','link','path']){
+    const v=o[k];
+    if(typeof v==='string' && /^https?:\/\//.test(v)) return v;
+  }
+  for(const k of Object.keys(o)){
+    const v=pickUrl(o[k]);
+    if(v) return v;
+  }
+  return null;
+}
+
+async function tryUpload(ep,file,filename){
+  const fd=new FormData();
+  fd.append('file',file,filename);
+  const r=await fetch(`${API_BASE}${ep}`,{
+    method:'POST',
+    headers:{'Authorization':`Bearer ${API_KEY}`},  // không set Content-Type, để browser tự thêm boundary
+    body:fd
+  });
+  if(r.status===404) throw new Error('404');
+  const j=await r.json().catch(()=>null);
+  const url=pickUrl(j);
+  if(!url){
+    console.log(`Upload ${ep} trả về:`,j);
+    throw new Error((j&&(j.msg||j.message))||'không thấy URL trong phản hồi');
+  }
+  return url;
+}
+
+async function uploadFile(file,filename){
+  // đã biết endpoint đúng thì dùng luôn
+  if(UPLOAD_EP){
+    try{ return await tryUpload(UPLOAD_EP,file,filename); }
+    catch(e){ UPLOAD_EP=null; localStorage.removeItem('omni_upload_ep'); }
+  }
+  const errs=[];
+  for(const ep of UPLOAD_CANDIDATES){
+    try{
+      const url=await tryUpload(ep,file,filename);
+      UPLOAD_EP=ep; localStorage.setItem('omni_upload_ep',ep);
+      console.log('Endpoint upload dùng được:',ep);
+      return url;
+    }catch(e){ errs.push(`${ep}: ${e.message}`); }
+  }
+  console.log('Tất cả endpoint upload đều lỗi:',errs);
+  throw new Error('Không tải file lên được. Xem Console (F12) để biết chi tiết từng endpoint đã thử.');
+}
+
 /* ---------- Status ---------- */
 const statusEl=document.getElementById('status'),statusText=document.getElementById('statusText'),progBar=document.getElementById('progBar');
 function setStatus(t,p){statusEl.classList.add('show');statusText.innerHTML=t;if(p!=null)progBar.style.width=p+'%';}
@@ -363,21 +454,34 @@ function hideStatus(){statusEl.classList.remove('show');}
 
 /* ---------- Create one video ---------- */
 async function makeVideo(idx){
-  if(!imgB64){alert('Vui lòng tải ảnh chân dung trước.');return;}
+  if(!imgFile){alert('Vui lòng tải ảnh chân dung trước.');return;}
   const seg=segments[idx];
   seg.status='run'; renderSegments();
 
   // ghi số dư TRƯỚC khi tạo
   creditBefore=await getCredit();
-  setStatus(`Đoạn ${idx+1}: đang gửi yêu cầu...`,8);
 
   try{
-    const audB64=await toB64(seg.blob);
+    // --- Bước 1: đưa ảnh & âm thanh lên để lấy URL công khai ---
+    setStatus(`Đoạn ${idx+1}: đang tải ảnh lên...`,5);
+    if(!imgUrl) imgUrl = await uploadFile(imgFile, 'portrait.png');
+
+    setStatus(`Đoạn ${idx+1}: đang tải âm thanh lên...`,12);
+    const audUrl = await uploadFile(
+      new File([seg.blob], `segment_${idx+1}.wav`, {type:'audio/wav'}),
+      `segment_${idx+1}.wav`
+    );
+
+    // --- Bước 2: tạo task ---
+    setStatus(`Đoạn ${idx+1}: đang gửi yêu cầu tạo video...`,18);
     const cr=await fetch(`${API_BASE}/api/v1/jobs/createTask`,{
       method:'POST',
       headers:{'Content-Type':'application/json','Authorization':`Bearer ${API_KEY}`},
       body:JSON.stringify({model:MODEL,input:{
-        image_url:imgB64, audio_url:audB64, aspect_ratio:ratio,
+        image_url:imgUrl, audio_url:audUrl,
+        output_resolution:resolution,
+        pe_fast_mode:false,
+        seed:-1,
         prompt:document.getElementById('prompt').value.trim()||undefined
       }})
     });
